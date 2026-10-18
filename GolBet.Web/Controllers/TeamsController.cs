@@ -1,5 +1,6 @@
 ﻿using GolBet.Repositories.Data;
 using GolBet.Services.DTOs;
+using Microsoft.AspNetCore.Authorization;
 
 using GolBet.Services.Interfaces;
 
