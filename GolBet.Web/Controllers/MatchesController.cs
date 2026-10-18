@@ -1,4 +1,4 @@
-﻿// GolBet.Web/Controllers/MatchesController.cs
+﻿/// GolBet.Web/Controllers/MatchesController.cs
 using GolBet.Entities.Enums;
 using GolBet.Repositories.Data;
 using GolBet.Services.DTOs;
@@ -19,14 +19,17 @@ public class MatchesController : Controller
     {
         _matchService = matchService;
         _teamService = teamService;
-    } 
-    
-    // GET /Matches            -> todos
-    // GET /Matches?status=Scheduled -> filtrado
-    public async Task<IActionResult> Index(MatchStatus? status)
+    }
+
+    // GET /Matches
+    // GET /Matches?status=Scheduled
+    // GET /Matches?search=nacional
+    // GET /Matches?status=Scheduled&search=nacional
+    public async Task<IActionResult> Index(MatchStatus? status, string? search)
     {
         ViewBag.CurrentStatus = status;
-        var board = await _matchService.GetBoardAsync(status);
+        ViewBag.CurrentSearch = search;
+        var board = await _matchService.GetBoardAsync(status, search);
         return View(board);
     }
 
@@ -38,160 +41,89 @@ public class MatchesController : Controller
 
         return View(match);
     }
+
+    // GET /Matches/Create
     [Authorize(Roles = DbSeeder.AdminRole)]
-    // GET /Matches/Create 
-
     public async Task<IActionResult> Create()
-
     {
-
         await LoadTeamsAsync();
-
         return View(new MatchFormDto());
-
     }
 
-
-
+    // POST /Matches/Create
+    [Authorize(Roles = DbSeeder.AdminRole)]
     [HttpPost, ValidateAntiForgeryToken]
-
     public async Task<IActionResult> Create(MatchFormDto dto)
-
     {
-
         if (!ModelState.IsValid)
-
         {
-
             await LoadTeamsAsync();
-
             return View(dto);
-
         }
-
-
 
         try
-
         {
-
             await _matchService.CreateAsync(dto);
-
             TempData["Success"] = "Partido creado correctamente.";
-
             return RedirectToAction(nameof(Index));
-
         }
-
-        catch (InvalidOperationException ex)      // business rule violated 
-
+        catch (InvalidOperationException ex)      // business rule violated
         {
-
             ModelState.AddModelError(string.Empty, ex.Message);
-
             await LoadTeamsAsync();
-
             return View(dto);
-
         }
-
     }
 
+    // GET /Matches/Edit/5
     [Authorize(Roles = DbSeeder.AdminRole)]
-
-    // GET /Matches/Edit/5 
-
     public async Task<IActionResult> Edit(int id)
-
     {
-
         var dto = await _matchService.GetForEditAsync(id);
-
         if (dto is null) return NotFound();
 
-
-
-        await LoadTeamsAsync(); // the form needs the dropdowns too 
-
+        await LoadTeamsAsync(); // the form needs the dropdowns too
         return View(dto);
-
     }
 
-
+    // POST /Matches/Edit
     [Authorize(Roles = DbSeeder.AdminRole)]
-    // POST /Matches/Edit 
-
     [HttpPost, ValidateAntiForgeryToken]
-
     public async Task<IActionResult> Edit(MatchFormDto dto)
-
     {
-
         if (!ModelState.IsValid)
-
         {
-
             await LoadTeamsAsync();
-
             return View(dto);
-
         }
-
-
 
         try
-
         {
-
             await _matchService.UpdateAsync(dto);
-
             TempData["Success"] = "Partido actualizado correctamente.";
-
             return RedirectToAction(nameof(Index));
-
         }
-
-        catch (InvalidOperationException ex)      // business rule violated 
-
+        catch (InvalidOperationException ex)      // business rule violated
         {
-
             ModelState.AddModelError(string.Empty, ex.Message);
-
             await LoadTeamsAsync();
-
             return View(dto);
-
         }
-
     }
 
+    // POST /Matches/Deactivate/5
     [Authorize(Roles = DbSeeder.AdminRole)]
-
-    // POST /Matches/Deactivate/5 
-
     [HttpPost, ValidateAntiForgeryToken]
-
     public async Task<IActionResult> Deactivate(int id)
-
     {
-
         await _matchService.DeactivateAsync(id);
-
         TempData["Success"] = "Partido desactivado.";
-
         return RedirectToAction(nameof(Index));
-
     }
-
-
 
     private async Task LoadTeamsAsync()
-
     {
-
         var teams = await _teamService.GetAllAsync();
-
         ViewBag.Teams = new SelectList(teams, "Id", "Name");
-
     }
 }
