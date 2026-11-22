@@ -7,16 +7,11 @@ using GolBet.Services.Interfaces;
 using GolBet.Services.Mapping;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using System.Globalization; 
+using System.Globalization;
 
-  
-
-var culture = new CultureInfo("es-CO"); 
-
-CultureInfo.DefaultThreadCurrentCulture = culture; 
-
-CultureInfo.DefaultThreadCurrentUICulture = culture; 
-
+var culture = new CultureInfo("es-CO");
+CultureInfo.DefaultThreadCurrentCulture = culture;
+CultureInfo.DefaultThreadCurrentUICulture = culture;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,44 +19,30 @@ builder.Services.AddControllersWithViews();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
-
 {
-
-    // Academic-friendly password policy (production would be stricter) 
-
+    // Academic-friendly password policy (production would be stricter)
     options.Password.RequiredLength = 6;
-
     options.Password.RequireNonAlphanumeric = false;
-
     options.Password.RequireUppercase = false;
-
     options.Password.RequireDigit = true;
-
     options.User.RequireUniqueEmail = true;
-
 })
-
 .AddEntityFrameworkStores<AppDbContext>();
 
-
-
 builder.Services.ConfigureApplicationCookie(options =>
-
 {
-
-    options.LoginPath = "/Account/Login";           // anonymous hitting [Authorize] 
-
-    options.AccessDeniedPath = "/Account/AccessDenied";  // wrong role 
-
+    options.LoginPath = "/Account/Login";                // anonymous hitting [Authorize]
+    options.AccessDeniedPath = "/Account/AccessDenied";  // wrong role
 });
-
 
 // Open generic registration: one line, a repository for every entity
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 
 // Specific repositories
 builder.Services.AddScoped<IMatchRepository, MatchRepository>();
+builder.Services.AddScoped<IBetRepository, BetRepository>();          // NUEVO (Módulo 8)
 
 // AutoMapper: escanea el ensamblado donde vive MappingProfile
 builder.Services.AddAutoMapper(typeof(MappingProfile));
@@ -69,23 +50,17 @@ builder.Services.AddAutoMapper(typeof(MappingProfile));
 // Business services
 builder.Services.AddScoped<IMatchService, MatchService>();
 builder.Services.AddScoped<ITeamService, TeamService>();
+builder.Services.AddScoped<IBetService, BetService>();                // NUEVO (Módulo 8)
 
 var app = builder.Build();
 
+// Seed the database on startup (migraciones + datos + roles + admin)
 using (var scope = app.Services.CreateScope())
-
 {
-
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<AppUser>>();
-
-
-
     await DbSeeder.SeedAsync(context, roleManager, userManager);
-
 }
 
 // Configure the HTTP request pipeline.
@@ -100,12 +75,7 @@ app.UseStaticFiles();
 
 app.UseRouting();
 
-
-
-// --- in the pipeline, before app.UseAuthorization() --- 
-
-app.UseAuthentication();   // who are you?  (reads the cookie, builds User) 
-
+app.UseAuthentication();   // who are you?  (reads the cookie, builds User)
 app.UseAuthorization();    // may you do this?  (evaluates [Authorize])
 
 app.MapControllerRoute(
